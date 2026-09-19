@@ -31,6 +31,9 @@ a.btn{display:block;text-align:center;color:#fff;text-decoration:none;font-size:
   var kind = q.get("k");
   var m = location.pathname.match(/\/(m|p)\/(\d+)/);
   if (m) { kind = m[1]; room = m[2]; }
+  var h = (location.hash || "").replace(/^#\/?/, "");
+  var hm = h.match(/^(m|p)\/?(\d+)$/);
+  if (hm) { kind = hm[1]; room = hm[2]; }
   var app = document.getElementById("app");
   if (!room || !/^[3-9](0[1-9]|1[0-6])$/.test(room)) {
     app.innerHTML = '<div class="err">请扫门上的房间码，不要从浏览器直接打开。</div>';
