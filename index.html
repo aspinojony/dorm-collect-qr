@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>宿舍收集</title>
+<title>宿舍登记</title>
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;background:#fafaf9;color:#1c1917}
 .wrap{max-width:420px;margin:0 auto;padding:28px 20px 40px}
-.k{font-size:13px;color:#78716c;letter-spacing:.08em}
+.k{font-size:13px;color:#78716c;letter-spacing:.12em}
 h1{font-size:64px;line-height:1;margin:8px 0 6px;letter-spacing:.04em}
-.sub{color:#444;margin:0 0 22px}
+.sub{color:#444;margin:0 0 22px;line-height:1.55}
 .lock{background:#fff;border:1px solid #e7e5e4;border-radius:14px;padding:14px 16px;margin:0 0 18px}
 .lock b{font-size:22px}
 .lock span{display:block;font-size:12px;color:#78716c;margin-top:4px}
 a.btn{display:block;text-align:center;color:#fff;text-decoration:none;font-size:18px;font-weight:700;padding:16px;border-radius:14px}
 .meter{background:#0f766e}
 .people{background:#9a3412}
-.hint{font-size:13px;color:#78716c;margin-top:16px;line-height:1.55}
+.hint{font-size:13px;color:#78716c;margin-top:16px;line-height:1.6}
 .err{background:#fef2f2;color:#991b1b;padding:12px;border-radius:12px}
 </style>
 </head>
@@ -36,22 +36,24 @@ a.btn{display:block;text-align:center;color:#fff;text-decoration:none;font-size:
   if (hm) { kind = hm[1]; room = hm[2]; }
   var app = document.getElementById("app");
   if (!room || !/^[3-9](0[1-9]|1[0-6])$/.test(room)) {
-    app.innerHTML = '<div class="err">请扫门上的房间码，不要从浏览器直接打开。</div>';
+    app.innerHTML = '<div class="err">请扫描本宿舍张贴的登记二维码。</div>';
     return;
   }
   var isMeter = kind !== "p";
   var form = isMeter ? METER : PEOPLE;
-  var title = isMeter ? "水电抄表" : "人员变动";
-  var sub = isMeter ? "本月电表 / 冷水 / 热水 · 各拍一张" : "入职入住 / 退宿 / 自离 / 调房 · 当天填";
-  var cta = isMeter ? "开始抄表" : "开始登记";
-  document.title = room + "房 · " + title;
+  var title = isMeter ? "水电费抄表" : "入住退宿登记";
+  var sub = isMeter
+    ? "请登记本宿舍本月电表、冷水表、热水表示数，并分别拍照上传。"
+    : "请在办理新入住、退宿、自行离宿或调整房间当日登记。";
+  var cta = isMeter ? "进入水电费抄表" : "进入入住退宿登记";
+  document.title = room + "宿舍 · " + title;
   app.innerHTML =
-    '<div class="k">门牌码已锁定房间</div>' +
+    '<div class="k">本宿舍登记</div>' +
     "<h1>" + room + "</h1>" +
     '<p class="sub">' + sub + "</p>" +
-    '<div class="lock">宿舍号 <b>' + room + "</b><span>请勿填成别的房间</span></div>" +
+    '<div class="lock">宿舍号 <b>' + room + "</b><span>请核对房间号后提交，勿误填其他宿舍</span></div>" +
     '<a class="btn ' + (isMeter ? "meter" : "people") + '" id="go" href="' + form + '">' + cta + "</a>" +
-    '<p class="hint">点按钮会复制房号并打开腾讯文档。第一项「宿舍号」填 <b>' + room + "</b>。若是空的，在输入框长按粘贴。</p>";
+    '<p class="hint">点击后将复制本宿舍房间号并打开登记表。请在「宿舍号」栏填写 <b>' + room + "</b>；如栏位为空，请长按粘贴。住宿天数无需填写，由行政按入住及退宿日期核算。</p>";
   document.getElementById("go").addEventListener("click", function(e){
     e.preventDefault();
     function openForm(){ location.href = form; }
