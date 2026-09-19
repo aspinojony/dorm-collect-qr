@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>行政抄表</title>
+<style>
+:root { --teal:#0f766e; --ink:#1c1917; --muted:#78716c; --line:#e7e5e4; }
+* { box-sizing: border-box; }
+body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif; background:#f5f5f4; color:var(--ink); }
+.top { background:#134e4a; color:#f0fdfa; padding:12px 16px 14px; }
+.top h1 { margin:0; font-size:16px; font-weight:650; }
+.top .sub { margin-top:4px; font-size:12px; color:#99f6e4; }
+.wrap { max-width:480px; margin:0 auto; padding:12px 14px 28px; }
+.progress { height:6px; background:#d6d3d1; border-radius:99px; overflow:hidden; margin:10px 0 8px; }
+.progress i { display:block; height:100%; background:#2dd4bf; width:0; }
+.meta { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+.card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; margin-top:10px; }
+.room { font-size:48px; font-weight:800; letter-spacing:.04em; margin:0; }
+.badge { display:inline-block; font-size:12px; background:#ecfdf5; color:#115e59; padding:2px 8px; border-radius:99px; margin-left:6px; }
+.last { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:12px 0; }
+.last div { background:#f5f5f4; border-radius:10px; padding:8px; text-align:center; }
+.last span { display:block; font-size:11px; color:var(--muted); }
+.last b { font-size:18px; font-variant-numeric:tabular-nums; }
+label { display:block; margin-top:10px; font-size:13px; color:var(--muted); }
+input { width:100%; font-size:28px; font-variant-numeric:tabular-nums; padding:10px 12px; border:1px solid var(--line); border-radius:12px; outline:none; }
+input:focus { border-color:var(--teal); }
+.warn { background:#fff7ed; color:#9a3412; padding:8px 10px; border-radius:10px; font-size:13px; margin-top:10px; }
+.nav { display:grid; grid-template-columns:1fr 1.4fr 1fr; gap:8px; margin-top:14px; }
+.nav button, .btn { border:0; border-radius:12px; padding:14px 8px; font-size:16px; font-weight:650; }
+.nav .prev, .nav .skip { background:#fff; color:var(--teal); border:1px solid #99f6e4; }
+.nav .next { background:var(--teal); color:#fff; }
+.floors { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.floors button { border:1px solid var(--line); background:#fff; border-radius:99px; padding:6px 10px; font-size:13px; }
+.floors button.on { background:#134e4a; color:#fff; border-color:#134e4a; }
+.tools { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.tools button { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; font-size:14px; }
+.ok { color:#15803d; font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>宿舍水电抄表（行政）</h1>
+  <div class="sub">按楼层顺序登记本月读数。无需拍照。数据保存在本机，可导出。</div>
+</div>
+<div class="wrap">
+  <div class="meta"><span id="progText">0 / 112</span><span id="doneText">已登记 0</span></div>
+  <div class="progress"><i id="bar"></i></div>
+  <div class="floors" id="floors"></div>
+  <div class="card">
+    <p class="room" id="roomNo">301</p>
+    <div class="last">
+      <div><span>上月电表</span><b id="le">—</b></div>
+      <div><span>上月冷水</span><b id="lc">—</b></div>
+      <div><span>上月热水</span><b id="lh">—</b></div>
+    </div>
+    <label>本月电表</label>
+    <input id="elec" inputmode="decimal" autocomplete="off">
+    <label>本月冷水表</label>
+    <input id="cold" inputmode="decimal" autocomplete="off">
+    <label>本月热水表</label>
+    <input id="hot" inputmode="decimal" autocomplete="off">
+    <div class="warn" id="warn" hidden></div>
+    <div class="nav">
+      <button class="prev" type="button" id="prev">上一间</button>
+      <button class="next" type="button" id="next">保存并下一间</button>
+      <button class="skip" type="button" id="copyLast">沿用上月</button>
+    </div>
+  </div>
+  <div class="tools">
+    <button type="button" id="export">导出本月读数</button>
+    <button type="button" id="jumpUn">跳到未登记</button>
+  </div>
+  <p class="ok" id="msg"></p>
+</div>
+<script>
+const ROOMS = [{"room": 301, "last_elec": 5172, "last_cold": 134, "last_hot": 102, "special": ""}, {"room": 302, "last_elec": 6547, "last_cold": 132, "last_hot": 70, "special": ""}, {"room": 303, "last_elec": 3398, "last_cold": 179, "last_hot": 25, "special": "小店"}, {"room": 304, "last_elec": 1398, "last_cold": 105, "last_hot": 55, "special": "厨房"}, {"room": 305, "last_elec": 3806, "last_cold": 156, "last_hot": 52, "special": "厨房"}, {"room": 306, "last_elec": 3289, "last_cold": 70, "last_hot": 39, "special": "自离"}, {"room": 307, "last_elec": 2823, "last_cold": 91, "last_hot": 48, "special": ""}, {"room": 308, "last_elec": 2182, "last_cold": 91, "last_hot": 97, "special": "空宿舍"}, {"room": 309, "last_elec": 4201, "last_cold": 138, "last_hot": 54, "special": ""}, {"room": 310, "last_elec": 460, "last_cold": 49, "last_hot": 35, "special": ""}, {"room": 311, "last_elec": 4370, "last_cold": 102, "last_hot": 40, "special": ""}, {"room": 312, "last_elec": 6703, "last_cold": 130, "last_hot": 34, "special": ""}, {"room": 313, "last_elec": 4289, "last_cold": 84, "last_hot": 31, "special": ""}, {"room": 314, "last_elec": 7083, "last_cold": 111, "last_hot": 29, "special": ""}, {"room": 315, "last_elec": 4594, "last_cold": 475, "last_hot": 41, "special": ""}, {"room": 316, "last_elec": 3541, "last_cold": 90, "last_hot": 27, "special": "自离"}, {"room": 401, "last_elec": 3058, "last_cold": 142, "last_hot": 30, "special": ""}, {"room": 402, "last_elec": 3794, "last_cold": 198, "last_hot": 43, "special": ""}, {"room": 403, "last_elec": 4158, "last_cold": 106, "last_hot": 50, "special": ""}, {"room": 404, "last_elec": 3623, "last_cold": 128, "last_hot": 47, "special": ""}, {"room": 405, "last_elec": 2869, "last_cold": 105, "last_hot": 53, "special": ""}, {"room": 406, "last_elec": 4159, "last_cold": 135, "last_hot": 51, "special": ""}, {"room": 407, "last_elec": 447, "last_cold": 81, "last_hot": 32, "special": "劳务带班"}, {"room": 408, "last_elec": 5359, "last_cold": 134, "last_hot": 63, "special": ""}, {"room": 409, "last_elec": 4089, "last_cold": 108, "last_hot": 40, "special": ""}, {"room": 410, "last_elec": 3028, "last_cold": 127, "last_hot": 54, "special": ""}, {"room": 411, "last_elec": 4251, "last_cold": 80, "last_hot": 38, "special": ""}, {"room": 412, "last_elec": 2668, "last_cold": 79, "last_hot": 34, "special": ""}, {"room": 413, "last_elec": 4100, "last_cold": 82, "last_hot": 32, "special": ""}, {"room": 414, "last_elec": 2983, "last_cold": 101, "last_hot": 48, "special": "自离"}, {"room": 415, "last_elec": 3409, "last_cold": 80, "last_hot": 34, "special": ""}, {"room": 416, "last_elec": 1636, "last_cold": 64, "last_hot": 40, "special": "空宿舍"}, {"room": 501, "last_elec": 2142, "last_cold": 108, "last_hot": 36, "special": ""}, {"room": 502, "last_elec": 3364, "last_cold": 83, "last_hot": 18, "special": ""}, {"room": 503, "last_elec": 5508, "last_cold": 62, "last_hot": 34, "special": ""}, {"room": 504, "last_elec": 3632, "last_cold": 94, "last_hot": 38, "special": ""}, {"room": 505, "last_elec": 4279, "last_cold": 87, "last_hot": 35, "special": ""}, {"room": 506, "last_elec": 4578, "last_cold": 201, "last_hot": 35, "special": ""}, {"room": 507, "last_elec": 3584, "last_cold": 76, "last_hot": 28, "special": ""}, {"room": 508, "last_elec": 5691, "last_cold": 94, "last_hot": 53, "special": ""}, {"room": 509, "last_elec": 3231, "last_cold": 101, "last_hot": 32, "special": ""}, {"room": 510, "last_elec": 5048, "last_cold": 88, "last_hot": 50, "special": ""}, {"room": 511, "last_elec": 4771, "last_cold": 146, "last_hot": 67, "special": ""}, {"room": 512, "last_elec": 4149, "last_cold": 94, "last_hot": 43, "special": ""}, {"room": 513, "last_elec": 4414, "last_cold": 154, "last_hot": 56, "special": ""}, {"room": 514, "last_elec": 4337, "last_cold": 113, "last_hot": 55, "special": ""}, {"room": 515, "last_elec": 3866, "last_cold": 86, "last_hot": 40, "special": ""}, {"room": 516, "last_elec": 2347, "last_cold": 82, "last_hot": 23, "special": "空宿舍"}, {"room": 601, "last_elec": 6289, "last_cold": 76, "last_hot": 40, "special": ""}, {"room": 602, "last_elec": 1099, "last_cold": 86, "last_hot": 16, "special": "自离"}, {"room": 603, "last_elec": 1568, "last_cold": 70, "last_hot": 15, "special": ""}, {"room": 604, "last_elec": 2125, "last_cold": 21, "last_hot": 10, "special": "劳务带班"}, {"room": 605, "last_elec": 1647, "last_cold": 53, "last_hot": 15, "special": ""}, {"room": 606, "last_elec": 2662, "last_cold": 93, "last_hot": 27, "special": ""}, {"room": 607, "last_elec": 4690, "last_cold": 138, "last_hot": 35, "special": ""}, {"room": 608, "last_elec": 1879, "last_cold": 99, "last_hot": 109, "special": ""}, {"room": 609, "last_elec": 3525, "last_cold": 182, "last_hot": 38, "special": ""}, {"room": 610, "last_elec": 2272, "last_cold": 112, "last_hot": 24, "special": ""}, {"room": 611, "last_elec": 1968, "last_cold": 75, "last_hot": 23, "special": ""}, {"room": 612, "last_elec": 4301, "last_cold": 71, "last_hot": 24, "special": ""}, {"room": 613, "last_elec": 379, "last_cold": 29, "last_hot": 9, "special": ""}, {"room": 614, "last_elec": 3169, "last_cold": 90, "last_hot": 58, "special": ""}, {"room": 615, "last_elec": 1900, "last_cold": 126, "last_hot": 25, "special": ""}, {"room": 616, "last_elec": 1493, "last_cold": 71, "last_hot": 30, "special": "空宿舍"}, {"room": 701, "last_elec": 2160, "last_cold": 131, "last_hot": 39, "special": ""}, {"room": 702, "last_elec": 2555, "last_cold": 139, "last_hot": 45, "special": "带班老师"}, {"room": 703, "last_elec": 1889, "last_cold": 88, "last_hot": 52, "special": ""}, {"room": 704, "last_elec": 1918, "last_cold": 210, "last_hot": 47, "special": ""}, {"room": 705, "last_elec": 1903, "last_cold": 91, "last_hot": 43, "special": ""}, {"room": 706, "last_elec": 3109, "last_cold": 143, "last_hot": 24, "special": ""}, {"room": 707, "last_elec": 2476, "last_cold": 103, "last_hot": 15, "special": ""}, {"room": 708, "last_elec": 678, "last_cold": 113, "last_hot": 54, "special": ""}, {"room": 709, "last_elec": 3150, "last_cold": 154, "last_hot": 51, "special": ""}, {"room": 710, "last_elec": 1097, "last_cold": 130, "last_hot": 33, "special": ""}, {"room": 711, "last_elec": 2860, "last_cold": 126, "last_hot": 53, "special": ""}, {"room": 712, "last_elec": 1689, "last_cold": 159, "last_hot": 79, "special": ""}, {"room": 713, "last_elec": 2271, "last_cold": 147, "last_hot": 43, "special": ""}, {"room": 714, "last_elec": 2484, "last_cold": 89, "last_hot": 30, "special": ""}, {"room": 715, "last_elec": 1551, "last_cold": 62, "last_hot": 26, "special": "利通劳务带班"}, {"room": 716, "last_elec": 2188, "last_cold": 104, "last_hot": 46, "special": ""}, {"room": 801, "last_elec": 1021, "last_cold": 81, "last_hot": 28, "special": ""}, {"room": 802, "last_elec": 1264, "last_cold": 92, "last_hot": 44, "special": ""}, {"room": 803, "last_elec": 1132, "last_cold": 42, "last_hot": 21, "special": ""}, {"room": 804, "last_elec": 1076, "last_cold": 156, "last_hot": 39, "special": ""}, {"room": 805, "last_elec": 931, "last_cold": 83, "last_hot": 29, "special": ""}, {"room": 806, "last_elec": 1427, "last_cold": 143, "last_hot": 30, "special": ""}, {"room": 807, "last_elec": 909, "last_cold": 162, "last_hot": 39, "special": ""}, {"room": 808, "last_elec": 1461, "last_cold": 96, "last_hot": 42, "special": ""}, {"room": 809, "last_elec": 1916, "last_cold": 125, "last_hot": 575, "special": ""}, {"room": 810, "last_elec": 393, "last_cold": 22, "last_hot": 1076, "special": ""}, {"room": 811, "last_elec": 1124, "last_cold": 51, "last_hot": 14, "special": ""}, {"room": 812, "last_elec": 1071, "last_cold": 136, "last_hot": 34, "special": ""}, {"room": 813, "last_elec": 2621, "last_cold": 56, "last_hot": 21, "special": ""}, {"room": 814, "last_elec": 1676, "last_cold": 100, "last_hot": 30, "special": ""}, {"room": 815, "last_elec": 1778, "last_cold": 83, "last_hot": 27, "special": ""}, {"room": 816, "last_elec": 1358, "last_cold": 88, "last_hot": 23, "special": ""}, {"room": 901, "last_elec": 750, "last_cold": 11, "last_hot": 13, "special": ""}, {"room": 902, "last_elec": 710, "last_cold": 45, "last_hot": 7, "special": ""}, {"room": 903, "last_elec": 1592, "last_cold": 47, "last_hot": 12, "special": "客房"}, {"room": 904, "last_elec": 1054, "last_cold": 37, "last_hot": 16, "special": ""}, {"room": 905, "last_elec": 529, "last_cold": 47, "last_hot": 8, "special": "客房"}, {"room": 906, "last_elec": 1873, "last_cold": 81, "last_hot": 20, "special": ""}, {"room": 907, "last_elec": 2113, "last_cold": 57, "last_hot": 28, "special": ""}, {"room": 908, "last_elec": 627, "last_cold": 27, "last_hot": 4, "special": ""}, {"room": 909, "last_elec": 585, "last_cold": 31, "last_hot": 9, "special": "客房"}, {"room": 910, "last_elec": 738, "last_cold": 53, "last_hot": 7, "special": ""}, {"room": 911, "last_elec": 1270, "last_cold": 31, "last_hot": 9, "special": "客房"}, {"room": 912, "last_elec": 1818, "last_cold": 46, "last_hot": 15, "special": "客房"}, {"room": 913, "last_elec": 2103, "last_cold": 56, "last_hot": 10, "special": "客房"}, {"room": 914, "last_elec": 585, "last_cold": 9, "last_hot": 2, "special": ""}, {"room": 915, "last_elec": 1384, "last_cold": 87, "last_hot": 114, "special": ""}, {"room": 916, "last_elec": 151, "last_cold": 49, "last_hot": 6, "special": "空宿舍"}];
+const KEY = "dorm-walk-2026-09";
+function load(){ try { return JSON.parse(localStorage.getItem(KEY)||"{}"); } catch(e){ return {}; } }
+function saveAll(data){ localStorage.setItem(KEY, JSON.stringify(data)); }
+let data = load();
+let idx = 0;
+function n(v){ return (v===0 || v) ? String(v) : "—"; }
+function filled(i){
+  const r = ROOMS[i].room;
+  const d = data[r]||{};
+  return d.elec!=="" && d.elec!=null && d.cold!=="" && d.cold!=null && d.hot!=="" && d.hot!=null;
+}
+function countFilled(){ return ROOMS.filter((_,i)=>filled(i)).length; }
+function show(){
+  const r = ROOMS[idx];
+  document.getElementById("roomNo").innerHTML = r.room + (r.special? '<span class="badge">'+r.special+"</span>":"");
+  document.getElementById("le").textContent = n(r.last_elec);
+  document.getElementById("lc").textContent = n(r.last_cold);
+  document.getElementById("lh").textContent = n(r.last_hot);
+  const d = data[r.room]||{};
+  document.getElementById("elec").value = d.elec!=null? d.elec : "";
+  document.getElementById("cold").value = d.cold!=null? d.cold : "";
+  document.getElementById("hot").value = d.hot!=null? d.hot : "";
+  checkWarn();
+  const cf = countFilled();
+  document.getElementById("progText").textContent = (idx+1)+" / "+ROOMS.length;
+  document.getElementById("doneText").textContent = "已登记 "+cf;
+  document.getElementById("bar").style.width = (cf/ROOMS.length*100)+"%";
+  document.querySelectorAll(".floors button").forEach(function(b,i){
+    b.className = (Math.floor(r.room/100)===(i+3)?"on":"");
+  });
+}
+function checkWarn(){
+  const r = ROOMS[idx];
+  const elec = parseFloat(document.getElementById("elec").value);
+  const cold = parseFloat(document.getElementById("cold").value);
+  const hot = parseFloat(document.getElementById("hot").value);
+  const msgs = [];
+  if (!isNaN(elec) && r.last_elec!=null && elec < r.last_elec) msgs.push("电表本月小于上月，请确认是否换表");
+  if (!isNaN(cold) && r.last_cold!=null && cold < r.last_cold) msgs.push("冷水本月小于上月，请确认是否换表");
+  if (!isNaN(hot) && r.last_hot!=null && hot < r.last_hot) msgs.push("热水本月小于上月，请确认是否换表");
+  const w = document.getElementById("warn");
+  if (msgs.length){ w.hidden=false; w.textContent=msgs.join("；"); }
+  else w.hidden=true;
+}
+function persist(){
+  const r = ROOMS[idx].room;
+  data[r] = {
+    elec: document.getElementById("elec").value.trim(),
+    cold: document.getElementById("cold").value.trim(),
+    hot: document.getElementById("hot").value.trim()
+  };
+  saveAll(data);
+}
+function go(d){
+  persist();
+  idx = Math.max(0, Math.min(ROOMS.length-1, idx+d));
+  show();
+  document.getElementById("elec").focus();
+}
+document.getElementById("prev").onclick=function(){ go(-1); };
+document.getElementById("next").onclick=function(){ persist(); if(idx<ROOMS.length-1) go(1); else { document.getElementById("msg").textContent="全部房间已浏览，请导出本月读数。"; } };
+document.getElementById("copyLast").onclick=function(){
+  const r = ROOMS[idx];
+  document.getElementById("elec").value = r.last_elec;
+  document.getElementById("cold").value = r.last_cold;
+  document.getElementById("hot").value = r.last_hot;
+  checkWarn(); persist();
+};
+["elec","cold","hot"].forEach(function(id){
+  document.getElementById(id).addEventListener("input", checkWarn);
+});
+document.getElementById("hot").addEventListener("keydown", function(e){
+  if(e.key==="Enter"){ e.preventDefault(); document.getElementById("next").click(); }
+});
+const fl = document.getElementById("floors");
+for(let f=3;f<=9;f++){
+  const b=document.createElement("button");
+  b.type="button"; b.textContent=f+"楼";
+  b.onclick=function(){ persist(); idx = ROOMS.findIndex(function(r){return Math.floor(r.room/100)===f;}); show(); };
+  fl.appendChild(b);
+}
+document.getElementById("jumpUn").onclick=function(){
+  persist();
+  const j = ROOMS.findIndex(function(_,i){return !filled(i);});
+  if(j<0){ document.getElementById("msg").textContent="112 间均已登记。"; return; }
+  idx=j; show();
+};
+document.getElementById("export").onclick=function(){
+  persist();
+  let csv = "\ufeff宿舍号,上月电表,本月电表,上月冷水,本月冷水,上月热水,本月热水,备注\n";
+  ROOMS.forEach(function(r){
+    const d=data[r.room]||{};
+    csv += [r.room,r.last_elec,d.elec||"",r.last_cold,d.cold||"",r.last_hot,d.hot||"",r.special||""].join(",")+"\n";
+  });
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="宿舍水电抄表_2026-09.csv";
+  a.click();
+  document.getElementById("msg").textContent="已导出 CSV，可用 Excel 打开后粘贴到水电明细。";
+};
+show();
+</script>
+</body>
+</html>
